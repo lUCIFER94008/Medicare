@@ -4,6 +4,8 @@ import Doctor from "@/models/Doctor";
 import User from "@/models/User";
 import { getAuthUser } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+
 // Safe helper to auto-create missing Doctor profiles for doctor users
 async function syncMissingDoctorProfiles() {
   try {

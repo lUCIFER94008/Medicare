@@ -14,6 +14,10 @@ import {
   ArrowRight,
   Star,
   Activity,
+  Search,
+  Users,
+  Award,
+  HeartPulse,
 } from "lucide-react";
 
 export default function HomePage() {
@@ -29,21 +33,21 @@ export default function HomePage() {
       consultationFee: "$45",
       availability: "Available Today",
       isVerified: true,
-      avatarBg: "linear-gradient(135deg, #087F8C 0%, #055C66 100%)",
+      avatarBg: "linear-gradient(135deg, #087F5B 0%, #066B4D 100%)",
       initials: "SJ",
     },
     {
       id: "doc-2",
       name: "Dr. Michael Thomas",
       specialization: "Cardiologist",
-      qualification: "MBBS, DM (Cardiology), FACC",
+      qualification: "MBBS, DM (Cardiology)",
       rating: 4.95,
       reviewsCount: 230,
       experience: "15+ Yrs Exp.",
       consultationFee: "$75",
       availability: "Available Tomorrow",
       isVerified: true,
-      avatarBg: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)",
+      avatarBg: "linear-gradient(135deg, #0AA06E 0%, #087F5B 100%)",
       initials: "MT",
     },
     {
@@ -57,7 +61,7 @@ export default function HomePage() {
       consultationFee: "$55",
       availability: "Available Today",
       isVerified: true,
-      avatarBg: "linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)",
+      avatarBg: "linear-gradient(135deg, #087F5B 0%, #066B4D 100%)",
       initials: "EW",
     },
   ];
@@ -74,22 +78,22 @@ export default function HomePage() {
           overflow: "hidden",
         }}
       >
+        {/* Soft Background Decorative Blobs */}
         <div
           style={{
             position: "absolute",
-            top: "-100px",
+            top: "-120px",
             right: "-100px",
-            width: "400px",
-            height: "400px",
+            width: "500px",
+            height: "500px",
             borderRadius: "50%",
-            backgroundColor: "var(--secondary)",
-            opacity: 0.6,
-            filter: "blur(60px)",
+            background: "radial-gradient(circle, rgba(221, 247, 236, 0.8) 0%, rgba(245, 252, 248, 0) 70%)",
             pointerEvents: "none",
+            zIndex: 0,
           }}
         />
 
-        <div className="container">
+        <div className="container" style={{ position: "relative", zIndex: 1 }}>
           <div
             style={{
               display: "grid",
@@ -101,18 +105,51 @@ export default function HomePage() {
             {/* Left Column Content */}
             <div>
               <div className="badge" style={{ marginBottom: "20px" }}>
-                <Activity size={16} /> #1 Trusted Telemedicine Platform
+                <HeartPulse size={16} /> #1 Modern Telemedicine Platform
               </div>
 
               <h1 className="heading-xl" style={{ marginBottom: "24px" }}>
-                Quality Healthcare <br />
-                <span style={{ color: "var(--primary)" }}>Anytime, Anywhere.</span>
+                Better Health, <br />
+                <span style={{ color: "var(--primary)" }}>Brighter Tomorrow.</span>
               </h1>
 
-              <p className="text-lead" style={{ marginBottom: "36px", maxWidth: "540px" }}>
-                Connect with qualified doctors from the comfort of your home. Book appointments, attend online consultations, receive digital prescriptions and manage your medical records securely.
+              <p className="text-lead" style={{ marginBottom: "32px", maxWidth: "540px" }}>
+                Connect with trusted doctors, book appointments, manage your health records, and get quality medical care — all in one place.
               </p>
 
+              {/* Search Bar in Hero */}
+              <div
+                className="glass-card"
+                style={{
+                  padding: "8px 12px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "12px",
+                  marginBottom: "36px",
+                  maxWidth: "520px",
+                  borderRadius: "var(--radius-xl)",
+                  backgroundColor: "#FFFFFF",
+                }}
+              >
+                <Search size={20} style={{ color: "var(--text-muted)", marginLeft: "8px" }} />
+                <input
+                  type="text"
+                  placeholder="Search doctors, specialties, or symptoms..."
+                  style={{
+                    border: "none",
+                    background: "transparent",
+                    boxShadow: "none",
+                    width: "100%",
+                    fontSize: "0.95rem",
+                    padding: "8px 0",
+                  }}
+                />
+                <Link href="/doctors" className="btn btn-primary" style={{ flexShrink: 0, borderRadius: "var(--radius-lg)" }}>
+                  Search
+                </Link>
+              </div>
+
+              {/* CTAs */}
               <div style={{ display: "flex", flexWrap: "wrap", gap: "16px", marginBottom: "48px" }}>
                 <Link href="/doctors" className="btn btn-primary btn-lg">
                   Find a Doctor <ArrowRight size={20} />
@@ -122,7 +159,7 @@ export default function HomePage() {
                 </Link>
               </div>
 
-              {/* Stats */}
+              {/* Stats Bar */}
               <div
                 style={{
                   display: "grid",
@@ -133,15 +170,15 @@ export default function HomePage() {
                 }}
               >
                 <div>
-                  <h3 style={{ fontFamily: "'Outfit', sans-serif", fontSize: "1.75rem", fontWeight: "700", color: "var(--primary)" }}>
+                  <h3 style={{ fontFamily: "'Outfit', sans-serif", fontSize: "1.75rem", fontWeight: "800", color: "var(--primary)" }}>
                     500+
                   </h3>
                   <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", fontWeight: "500" }}>
-                    Qualified Doctors
+                    Verified Specialists
                   </p>
                 </div>
                 <div>
-                  <h3 style={{ fontFamily: "'Outfit', sans-serif", fontSize: "1.75rem", fontWeight: "700", color: "var(--primary)" }}>
+                  <h3 style={{ fontFamily: "'Outfit', sans-serif", fontSize: "1.75rem", fontWeight: "800", color: "var(--primary)" }}>
                     10K+
                   </h3>
                   <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", fontWeight: "500" }}>
@@ -149,25 +186,26 @@ export default function HomePage() {
                   </p>
                 </div>
                 <div>
-                  <h3 style={{ fontFamily: "'Outfit', sans-serif", fontSize: "1.75rem", fontWeight: "700", color: "var(--primary)" }}>
+                  <h3 style={{ fontFamily: "'Outfit', sans-serif", fontSize: "1.75rem", fontWeight: "800", color: "var(--primary)" }}>
                     24/7
                   </h3>
                   <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", fontWeight: "500" }}>
-                    Healthcare Support
+                    Medical Support
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* Right Column Visual */}
+            {/* Right Column Floating Glass Visual */}
             <div style={{ position: "relative" }}>
+              {/* Central Doctor Profile Card Visual */}
               <div
+                className="glass-panel"
                 style={{
-                  background: "linear-gradient(135deg, #FFFFFF 0%, #F0FBFB 100%)",
-                  borderRadius: "var(--radius-xl)",
                   padding: "32px",
-                  border: "1px solid var(--border-color)",
-                  boxShadow: "0 20px 40px -10px rgba(8, 127, 140, 0.15)",
+                  borderRadius: "var(--radius-xl)",
+                  border: "1px solid rgba(255, 255, 255, 0.8)",
+                  boxShadow: "0 20px 40px rgba(26, 94, 67, 0.12)",
                 }}
               >
                 <div
@@ -180,13 +218,13 @@ export default function HomePage() {
                     borderBottom: "1px solid var(--border-color)",
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
                     <div
                       style={{
-                        width: "48px",
-                        height: "48px",
+                        width: "52px",
+                        height: "52px",
                         borderRadius: "50%",
-                        backgroundColor: "var(--secondary)",
+                        backgroundColor: "var(--mint)",
                         color: "var(--primary)",
                         display: "flex",
                         alignItems: "center",
@@ -194,44 +232,39 @@ export default function HomePage() {
                         fontWeight: "700",
                       }}
                     >
-                      <Stethoscope size={24} />
+                      <Stethoscope size={26} />
                     </div>
                     <div>
-                      <h4 style={{ fontSize: "1rem", fontWeight: "700" }}>Live Video Consultation</h4>
-                      <p style={{ fontSize: "0.8rem", color: "#047857", fontWeight: "600" }}>
-                        ● Connected with Dr. Sarah
+                      <h4 style={{ fontSize: "1.05rem", fontWeight: "700", color: "var(--text-primary)" }}>
+                        Dr. Sarah Johnson
+                      </h4>
+                      <p style={{ fontSize: "0.85rem", color: "var(--primary)", fontWeight: "600" }}>
+                        ● Live Consultation Active
                       </p>
                     </div>
                   </div>
-                  <span
-                    style={{
-                      padding: "6px 12px",
-                      borderRadius: "var(--radius-full)",
-                      backgroundColor: "#FEE2E2",
-                      color: "#DC2626",
-                      fontSize: "0.75rem",
-                      fontWeight: "700",
-                    }}
-                  >
-                    HD Live
+                  <span className="badge" style={{ backgroundColor: "#D1FAE5", color: "#065F46" }}>
+                    Available Online
                   </span>
                 </div>
 
                 <div
                   style={{
-                    backgroundColor: "var(--primary-light)",
+                    backgroundColor: "var(--mint-light)",
                     borderRadius: "var(--radius-lg)",
                     padding: "20px",
                     marginBottom: "20px",
                     border: "1px dashed var(--primary)",
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
-                    <Video size={20} style={{ color: "var(--primary)" }} />
-                    <span style={{ fontWeight: "600", fontSize: "0.95rem" }}>Tele-Consultation Active</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
+                    <Video size={18} style={{ color: "var(--primary)" }} />
+                    <span style={{ fontWeight: "600", fontSize: "0.9rem", color: "var(--text-primary)" }}>
+                      Encrypted Consultation Active
+                    </span>
                   </div>
-                  <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", lineHeight: "1.5" }}>
-                    "Your symptoms indicate mild allergic rhinitis. I have generated your digital prescription."
+                  <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", lineHeight: "1.5" }}>
+                    "Your latest lab results look healthy. I've sent your updated digital prescription to your patient dashboard."
                   </p>
                 </div>
 
@@ -243,34 +276,72 @@ export default function HomePage() {
                     backgroundColor: "#FFFFFF",
                     padding: "16px",
                     borderRadius: "var(--radius-md)",
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.03)",
                     border: "1px solid var(--border-color)",
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                     <FileText size={20} style={{ color: "var(--primary)" }} />
                     <div>
-                      <h5 style={{ fontSize: "0.875rem", fontWeight: "600" }}>Digital Rx & Lab Report</h5>
-                      <p style={{ fontSize: "0.75rem", color: "var(--text-light)" }}>Updated 5 mins ago</p>
+                      <h5 style={{ fontSize: "0.875rem", fontWeight: "600", color: "var(--text-primary)" }}>
+                        Digital Prescription & Lab Report
+                      </h5>
+                      <p style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Ready for Instant Download</p>
                     </div>
                   </div>
-                  <span className="badge">Verified</span>
+                  <span className="status-badge" style={{ backgroundColor: "var(--mint)", color: "var(--primary)" }}>
+                    Verified Rx
+                  </span>
+                </div>
+              </div>
+
+              {/* Floating Glass Cards */}
+              <div
+                className="glass-card animate-float"
+                style={{
+                  position: "absolute",
+                  top: "-20px",
+                  left: "-20px",
+                  padding: "14px 20px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "12px",
+                  borderRadius: "var(--radius-lg)",
+                  backgroundColor: "rgba(255, 255, 255, 0.9)",
+                }}
+              >
+                <div
+                  style={{
+                    width: "40px",
+                    height: "40px",
+                    borderRadius: "50%",
+                    backgroundColor: "var(--mint)",
+                    color: "var(--primary)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Users size={20} />
+                </div>
+                <div>
+                  <h5 style={{ fontSize: "0.95rem", fontWeight: "700", color: "var(--text-primary)" }}>10K+</h5>
+                  <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>Happy Patients</p>
                 </div>
               </div>
 
               <div
+                className="glass-card animate-float"
                 style={{
                   position: "absolute",
-                  bottom: "-20px",
-                  left: "-20px",
-                  backgroundColor: "#FFFFFF",
+                  bottom: "-24px",
+                  right: "-20px",
                   padding: "14px 20px",
-                  borderRadius: "var(--radius-lg)",
-                  boxShadow: "0 10px 30px rgba(0,0,0,0.1)",
-                  border: "1px solid var(--border-color)",
                   display: "flex",
                   alignItems: "center",
                   gap: "12px",
+                  borderRadius: "var(--radius-lg)",
+                  backgroundColor: "rgba(255, 255, 255, 0.9)",
+                  animationDelay: "2.5s",
                 }}
               >
                 <div
@@ -288,8 +359,8 @@ export default function HomePage() {
                   <Star size={20} fill="#D97706" />
                 </div>
                 <div>
-                  <h5 style={{ fontSize: "0.95rem", fontWeight: "700" }}>4.9 / 5.0 Rating</h5>
-                  <p style={{ fontSize: "0.775rem", color: "var(--text-muted)" }}>From 10,000+ Patient Reviews</p>
+                  <h5 style={{ fontSize: "0.95rem", fontWeight: "700", color: "var(--text-primary)" }}>24/7</h5>
+                  <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>Medical Support</p>
                 </div>
               </div>
             </div>
@@ -297,59 +368,150 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 2. SERVICES SECTION */}
-      <section id="services" className="section-padding" style={{ backgroundColor: "var(--bg-white)" }}>
+      {/* 2. HOME QUICK ACTIONS (4 Glass Cards) */}
+      <section className="section-padding" style={{ backgroundColor: "#FFFFFF" }}>
         <div className="container">
-          <div className="section-header">
-            <span className="badge">Our Medical Services</span>
-            <h2 className="heading-lg">Everything You Need for Better Healthcare</h2>
-            <p className="text-lead">
-              Access complete medical care online with top certified specialists in just a few clicks.
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+              gap: "24px",
+            }}
+          >
+            {[
+              {
+                title: "Find Doctors",
+                desc: "Browse verified specialists across 15+ medical disciplines.",
+                icon: Stethoscope,
+                href: "/doctors",
+              },
+              {
+                title: "Book Appointments",
+                desc: "Schedule flexible online or clinic consultation slots.",
+                icon: CalendarCheck,
+                href: "/appointments",
+              },
+              {
+                title: "Online Consultation",
+                desc: "Join secure video consultations from your browser.",
+                icon: Video,
+                href: "/consultation",
+              },
+              {
+                title: "Digital Prescriptions",
+                desc: "Access signed medical records & prescriptions anytime.",
+                icon: FileText,
+                href: "/prescriptions",
+              },
+            ].map((action, idx) => (
+              <Link
+                key={idx}
+                href={action.href}
+                className="glass-card"
+                style={{
+                  padding: "28px 24px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "16px",
+                  backgroundColor: "var(--mint-light)",
+                  border: "1px solid var(--border-color)",
+                }}
+              >
+                <div
+                  style={{
+                    width: "52px",
+                    height: "52px",
+                    borderRadius: "var(--radius-md)",
+                    backgroundColor: "var(--mint)",
+                    color: "var(--primary)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <action.icon size={26} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: "1.15rem", fontWeight: "700", color: "var(--text-primary)", marginBottom: "6px" }}>
+                    {action.title}
+                  </h3>
+                  <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)", lineHeight: "1.5" }}>
+                    {action.desc}
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 3. OUR HEALTHCARE SERVICES (6 Cards) */}
+      <section id="services" className="section-padding" style={{ backgroundColor: "var(--bg-light)" }}>
+        <div className="container">
+          <div style={{ textAlign: "center", marginBottom: "48px" }}>
+            <span className="badge" style={{ marginBottom: "12px" }}>Our Healthcare Services</span>
+            <h2 className="heading-lg" style={{ marginBottom: "16px" }}>Complete Healthcare Solutions</h2>
+            <p className="text-lead" style={{ maxWidth: "600px", margin: "0 auto" }}>
+              Experience smooth, patient-first care with our comprehensive suite of telemedicine services.
             </p>
           </div>
 
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
               gap: "28px",
             }}
           >
             <ServiceCard
               icon={Stethoscope}
               title="Doctor Consultation"
-              description="Connect with qualified general physicians and specialists remotely via high-definition audio/video calls."
+              description="Connect with qualified general physicians and medical specialists remotely."
               badgeText="Instant Access"
             />
             <ServiceCard
               icon={CalendarCheck}
-              title="Book Appointment"
-              description="Choose your preferred doctor, pick an available slot that suits your daily schedule, and confirm instantly."
-              badgeText="Easy Scheduling"
+              title="Appointment Booking"
+              description="Choose your preferred doctor, select an open slot, and get immediate booking confirmation."
+              badgeText="Easy Booking"
             />
             <ServiceCard
               icon={Video}
               title="Video Consultation"
-              description="Face-to-face encrypted telehealth video consultations with doctor screen sharing and live advice."
+              description="Encrypted face-to-face video calls with doctor screen sharing and digital guidance."
               badgeText="HD Video"
             />
             <ServiceCard
               icon={FileText}
               title="Digital Prescription"
-              description="Receive official digital prescriptions directly on your patient portal ready for pharmacy download."
-              badgeText="Instant Download"
+              description="Official digital prescriptions automatically sent to your patient portal after consultation."
+              badgeText="Instant Rx"
+            />
+            <ServiceCard
+              icon={Award}
+              title="Medical Records"
+              description="Store and access lab reports, diagnostic scans, and medical history in a safe cloud vault."
+              badgeText="Encrypted Storage"
+            />
+            <ServiceCard
+              icon={MessageSquare}
+              title="Patient–Doctor Chat"
+              description="Direct message your consulting doctor for follow-up questions and care instructions."
+              badgeText="Real-time Chat"
             />
           </div>
         </div>
       </section>
 
-      {/* 3. HOW IT WORKS SECTION */}
-      <section className="section-padding" style={{ backgroundColor: "var(--bg-light)" }}>
+      {/* 4. HOW IT WORKS (4 Step Process) */}
+      <section className="section-padding" style={{ backgroundColor: "#FFFFFF" }}>
         <div className="container">
-          <div className="section-header">
-            <span className="badge">Simple Process</span>
-            <h2 className="heading-lg">How MediCare Works</h2>
-            <p className="text-lead">Follow 4 easy steps to receive quality medical care without leaving your home.</p>
+          <div style={{ textAlign: "center", marginBottom: "48px" }}>
+            <span className="badge" style={{ marginBottom: "12px" }}>How It Works</span>
+            <h2 className="heading-lg" style={{ marginBottom: "16px" }}>4 Easy Steps to Better Health</h2>
+            <p className="text-lead" style={{ maxWidth: "560px", margin: "0 auto" }}>
+              Getting quality healthcare has never been this simple and accessible.
+            </p>
           </div>
 
           <div
@@ -363,36 +525,37 @@ export default function HomePage() {
               {
                 step: "01",
                 title: "Create Account",
-                desc: "Sign up in less than 2 minutes as a patient with your email and basic details.",
+                desc: "Sign up in under 2 minutes as a patient with your email and basic details.",
                 icon: UserCheck,
               },
               {
                 step: "02",
-                title: "Find a Doctor",
-                desc: "Filter experienced doctors by specialization, qualification, rating, and fee.",
+                title: "Find Doctor",
+                desc: "Browse and filter verified doctors by specialization, experience, and fee.",
                 icon: Stethoscope,
               },
               {
                 step: "03",
                 title: "Book Appointment",
-                desc: "Select a convenient consultation slot and provide your current medical context.",
+                desc: "Pick your preferred time slot and share your symptoms securely.",
                 icon: CalendarCheck,
               },
               {
                 step: "04",
                 title: "Consult Online",
-                desc: "Join live video call, chat in real-time, and get your digital prescription instantly.",
+                desc: "Attend video call consultation, chat, and receive your digital prescription.",
                 icon: Video,
               },
             ].map((item, idx) => (
               <div
                 key={idx}
-                className="card-base"
+                className="glass-card"
                 style={{
                   padding: "32px 24px",
                   position: "relative",
                   display: "flex",
                   flexDirection: "column",
+                  backgroundColor: "var(--bg-light)",
                 }}
               >
                 <span
@@ -400,7 +563,7 @@ export default function HomePage() {
                     fontFamily: "'Outfit', sans-serif",
                     fontSize: "2.5rem",
                     fontWeight: "800",
-                    color: "var(--secondary-hover)",
+                    color: "rgba(10, 160, 110, 0.2)",
                     position: "absolute",
                     top: "16px",
                     right: "20px",
@@ -414,7 +577,7 @@ export default function HomePage() {
                     width: "48px",
                     height: "48px",
                     borderRadius: "12px",
-                    backgroundColor: "var(--secondary)",
+                    backgroundColor: "var(--mint)",
                     color: "var(--primary)",
                     display: "flex",
                     alignItems: "center",
@@ -431,12 +594,13 @@ export default function HomePage() {
                     fontWeight: "700",
                     fontFamily: "'Outfit', sans-serif",
                     marginBottom: "10px",
+                    color: "var(--text-primary)",
                   }}
                 >
                   {item.title}
                 </h3>
 
-                <p style={{ color: "var(--text-muted)", fontSize: "0.9rem", lineHeight: "1.5" }}>
+                <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem", lineHeight: "1.5" }}>
                   {item.desc}
                 </p>
               </div>
@@ -445,8 +609,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 4. WHY CHOOSE MEDICARE */}
-      <section className="section-padding" style={{ backgroundColor: "var(--bg-white)" }}>
+      {/* 5. WHY CHOOSE MEDICARE */}
+      <section className="section-padding" style={{ backgroundColor: "var(--bg-light)" }}>
         <div className="container">
           <div
             style={{
@@ -458,13 +622,13 @@ export default function HomePage() {
           >
             <div>
               <span className="badge" style={{ marginBottom: "16px" }}>
-                Why Choose Us
+                Why Choose MediCare?
               </span>
               <h2 className="heading-lg" style={{ marginBottom: "20px" }}>
-                Patient-Centric Telemedicine Designed For Modern Healthcare
+                Trusted Healthcare Platform for You & Your Family
               </h2>
               <p className="text-lead" style={{ marginBottom: "32px" }}>
-                We combine top medical expertise with cutting-edge digital infrastructure to deliver compassionate, fast, and secure remote consultations.
+                Designed with a modern pale-green aesthetic, MediCare provides a calm, safe, and intuitive experience for remote healthcare.
               </p>
 
               <div
@@ -475,16 +639,16 @@ export default function HomePage() {
                 }}
               >
                 {[
-                  "Qualified & Verified Doctors",
+                  "Verified Doctors",
                   "Secure Medical Records",
                   "Easy Appointment Booking",
-                  "Real-Time Online Chat",
-                  "HD Video Consultation",
+                  "Online Consultations",
                   "Digital Prescriptions",
+                  "24/7 Healthcare Access",
                 ].map((feature, i) => (
                   <div key={i} style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                     <CheckCircle2 size={18} style={{ color: "var(--primary)", flexShrink: 0 }} />
-                    <span style={{ fontSize: "0.95rem", fontWeight: "600", color: "var(--text-dark)" }}>
+                    <span style={{ fontSize: "0.95rem", fontWeight: "600", color: "var(--text-primary)" }}>
                       {feature}
                     </span>
                   </div>
@@ -493,11 +657,11 @@ export default function HomePage() {
             </div>
 
             <div
+              className="glass-panel"
               style={{
-                backgroundColor: "var(--primary-light)",
-                borderRadius: "var(--radius-xl)",
                 padding: "40px",
-                border: "1px solid var(--secondary)",
+                backgroundColor: "#FFFFFF",
+                borderRadius: "var(--radius-xl)",
               }}
             >
               <h3
@@ -509,19 +673,23 @@ export default function HomePage() {
                   marginBottom: "16px",
                 }}
               >
-                Healthcare Security Guaranteed
+                Healthcare Security & Privacy
               </h3>
-              <p style={{ color: "var(--text-muted)", fontSize: "0.95rem", lineHeight: "1.6", marginBottom: "24px" }}>
-                All consultation sessions, patient medical histories, uploaded lab reports, and prescriptions are safeguarded with bank-grade encryption standards.
+              <p style={{ color: "var(--text-secondary)", fontSize: "0.95rem", lineHeight: "1.6", marginBottom: "24px" }}>
+                All consultation sessions, patient medical records, diagnostic reports, and prescriptions are protected with bank-grade encryption standards.
               </p>
-              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                   <ShieldCheck size={20} style={{ color: "var(--primary)" }} />
-                  <span style={{ fontWeight: "600", fontSize: "0.9rem" }}>HIPAA Compliant & Encrypted</span>
+                  <span style={{ fontWeight: "600", fontSize: "0.9rem", color: "var(--text-primary)" }}>
+                    Encrypted & Confidential Data
+                  </span>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                   <Clock size={20} style={{ color: "var(--primary)" }} />
-                  <span style={{ fontWeight: "600", fontSize: "0.9rem" }}>24/7 Instant Medical Access</span>
+                  <span style={{ fontWeight: "600", fontSize: "0.9rem", color: "var(--text-primary)" }}>
+                    24/7 Healthcare Portal Availability
+                  </span>
                 </div>
               </div>
             </div>
@@ -529,14 +697,14 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 5. DOCTORS SECTION */}
-      <section className="section-padding" style={{ backgroundColor: "var(--bg-light)" }}>
+      {/* 6. FEATURED DOCTORS SECTION */}
+      <section className="section-padding" style={{ backgroundColor: "#FFFFFF" }}>
         <div className="container">
-          <div className="section-header">
-            <span className="badge">Medical Experts</span>
-            <h2 className="heading-lg">Consult Our Top Specialists</h2>
-            <p className="text-lead">
-              Our verified medical professionals are ready to assist you with personalized medical care.
+          <div style={{ textAlign: "center", marginBottom: "48px" }}>
+            <span className="badge" style={{ marginBottom: "12px" }}>Medical Experts</span>
+            <h2 className="heading-lg" style={{ marginBottom: "16px" }}>Consult Our Top Specialists</h2>
+            <p className="text-lead" style={{ maxWidth: "580px", margin: "0 auto" }}>
+              Our verified medical professionals are ready to assist you with compassionate online care.
             </p>
           </div>
 
@@ -554,73 +722,8 @@ export default function HomePage() {
           </div>
 
           <div style={{ textAlign: "center" }}>
-            <Link href="/doctors" className="btn btn-outline btn-lg">
+            <Link href="/doctors" className="btn btn-primary btn-lg">
               View All Doctors <ArrowRight size={18} />
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* 6. ABOUT & CTA BANNER */}
-      <section id="about" className="section-padding" style={{ backgroundColor: "var(--bg-white)" }}>
-        <div className="container">
-          <div
-            style={{
-              background: "linear-gradient(135deg, #087F8C 0%, #055C66 100%)",
-              borderRadius: "var(--radius-xl)",
-              padding: "60px 40px",
-              color: "#FFFFFF",
-              textAlign: "center",
-              boxShadow: "0 20px 40px rgba(8, 127, 140, 0.25)",
-            }}
-          >
-            <span
-              style={{
-                display: "inline-block",
-                padding: "6px 16px",
-                borderRadius: "var(--radius-full)",
-                backgroundColor: "rgba(255, 255, 255, 0.15)",
-                fontSize: "0.85rem",
-                fontWeight: "600",
-                marginBottom: "20px",
-              }}
-            >
-              About MediCare
-            </span>
-
-            <h2
-              style={{
-                fontFamily: "'Outfit', sans-serif",
-                fontSize: "2.5rem",
-                fontWeight: "700",
-                marginBottom: "20px",
-              }}
-            >
-              Bringing Healthcare Closer to You.
-            </h2>
-
-            <p
-              style={{
-                maxWidth: "680px",
-                margin: "0 auto 36px auto",
-                fontSize: "1.1rem",
-                lineHeight: "1.6",
-                color: "rgba(255, 255, 255, 0.9)",
-              }}
-            >
-              MediCare bridges the gap between patients and healthcare providers through a seamless, cloud-based telemedicine solution. Consult top doctors, receive verified digital prescriptions, and manage your health record effortlessly.
-            </p>
-
-            <Link
-              href="/register"
-              className="btn btn-secondary btn-lg"
-              style={{
-                backgroundColor: "#FFFFFF",
-                color: "var(--primary)",
-                fontWeight: "700",
-              }}
-            >
-              Create Your Account <ArrowRight size={20} />
             </Link>
           </div>
         </div>

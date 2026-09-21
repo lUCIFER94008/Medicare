@@ -1,6 +1,7 @@
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import MobileNav from "@/components/MobileNav";
 import { AuthProvider } from "@/context/AuthContext";
 
 export const metadata = {
@@ -16,10 +17,11 @@ export default function RootLayout({ children }) {
       <body>
         <AuthProvider>
           <Navbar />
-          <main style={{ minHeight: "calc(100vh - 76px - 400px)", flexGrow: 1 }}>
+          <main style={{ minHeight: "calc(100vh - 76px - 400px)", flexGrow: 1, position: "relative" }}>
             {children}
           </main>
           <Footer />
+          <MobileNav />
         </AuthProvider>
       </body>
     </html>

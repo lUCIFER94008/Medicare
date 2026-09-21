@@ -5,6 +5,8 @@ import Prescription from "@/models/Prescription";
 import MedicalReport from "@/models/MedicalReport";
 import { getAuthUser } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req) {
   try {
     await connectDB();
