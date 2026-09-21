@@ -100,9 +100,17 @@ const seedData = async () => {
 
     console.log("Seeding Patient Users...");
     const patient1 = await User.create({
-      name: "John Doe",
+      name: "John Patient",
       email: "john.patient@gmail.com",
       phone: "+1 555 234 5678",
+      password: "patientpassword123",
+      role: "patient",
+    });
+
+    const patient2 = await User.create({
+      name: "Jane Smith",
+      email: "jane.patient@gmail.com",
+      phone: "+1 555 876 5432",
       password: "patientpassword123",
       role: "patient",
     });
@@ -138,7 +146,7 @@ const seedData = async () => {
       role: "doctor",
     });
 
-    await Doctor.create({
+    const docProfile2 = await Doctor.create({
       userId: docUser2._id,
       name: "Dr. Michael Thomas",
       email: docUser2.email,
@@ -187,6 +195,17 @@ const seedData = async () => {
       paymentStatus: "paid",
     });
 
+    const appt2 = await Appointment.create({
+      patientId: patient2._id,
+      doctorId: docProfile2._id,
+      appointmentDate: "2026-10-02",
+      appointmentTime: "02:00 PM",
+      reason: "Routine cardiovascular checkup & blood pressure review",
+      consultationType: "video",
+      status: "confirmed",
+      paymentStatus: "paid",
+    });
+
     console.log("Seeding Digital Prescriptions...");
     await Prescription.create({
       patientId: patient1._id,
@@ -209,6 +228,29 @@ const seedData = async () => {
         },
       ],
       instructions: "Drink warm water and get plenty of rest.",
+    });
+
+    await Prescription.create({
+      patientId: patient2._id,
+      doctorId: docProfile2._id,
+      appointmentId: appt2._id,
+      medicines: [
+        {
+          name: "Atorvastatin",
+          dosage: "10mg",
+          frequency: "Once daily",
+          duration: "30 days",
+          instructions: "At bedtime with water",
+        },
+        {
+          name: "Amlodipine",
+          dosage: "5mg",
+          frequency: "Once daily",
+          duration: "30 days",
+          instructions: "Morning after breakfast",
+        },
+      ],
+      instructions: "Maintain low sodium diet and regular daily walking.",
     });
 
     console.log("==========================================");

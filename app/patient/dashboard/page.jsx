@@ -15,19 +15,19 @@ import {
   Stethoscope,
   Plus,
   LayoutDashboard,
+  CheckCircle2,
+  Pill,
 } from "lucide-react";
 
 export default function PatientDashboard() {
   const { user, logout, isAuthenticated, loading: authLoading } = useAuth();
   const router = useRouter();
 
-  const [appointments, setAppointments] = useState([]);
-  const [prescriptions, setPrescriptions] = useState([]);
-  const [reports, setReports] = useState([]);
+  const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
+    if (!authLoading && (!isAuthenticated || user?.role !== "patient")) {
       router.push("/login");
     } else if (user) {
       fetchDashboardData();
@@ -37,15 +37,10 @@ export default function PatientDashboard() {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const [apptRes, rxRes, reportRes] = await Promise.all([
-        apiGet("/appointments"),
-        apiGet("/prescriptions"),
-        apiGet("/reports"),
-      ]);
-
-      if (apptRes.success) setAppointments(apptRes.data);
-      if (rxRes.success) setPrescriptions(rxRes.data);
-      if (reportRes.success) setReports(reportRes.data);
+      const res = await apiGet("/patient/dashboard");
+      if (res.success && res.data) {
+        setDashboardData(res.data);
+      }
     } catch (err) {
       console.error("Error loading patient dashboard data:", err);
     } finally {
@@ -66,12 +61,21 @@ export default function PatientDashboard() {
     }
   };
 
-  const upcomingAppointments = appointments.filter(
-    (a) => a.status === "confirmed" || a.status === "pending"
-  );
+  const stats = dashboardData?.statistics || {
+    upcomingAppointments: 0,
+    completedAppointments: 0,
+    totalAppointments: 0,
+    prescriptions: 0,
+    medicalReports: 0,
+  };
+
+  const upcomingAppointments = dashboardData?.upcomingAppointments || [];
+  const recentPrescriptions = dashboardData?.recentPrescriptions || [];
+  const recentReports = dashboardData?.recentReports || [];
 
   return (
     <div style={{ backgroundColor: "var(--bg-light)", minHeight: "100vh", display: "flex" }}>
+      {/* Sidebar */}
       <aside
         style={{
           width: "260px",
@@ -88,7 +92,10 @@ export default function PatientDashboard() {
           <h4 style={{ fontSize: "1.1rem", fontWeight: "700", color: "var(--primary)" }}>
             Patient Portal
           </h4>
-          <p style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>{user?.email}</p>
+          <p style={{ fontSize: "0.85rem", fontWeight: "600", color: "var(--text-dark)", marginTop: "2px" }}>
+            {user?.name}
+          </p>
+          <p style={{ fontSize: "0.775rem", color: "var(--text-muted)" }}>{user?.email}</p>
         </div>
 
         <Link
@@ -135,7 +142,7 @@ export default function PatientDashboard() {
             fontSize: "0.9rem",
           }}
         >
-          <Calendar size={18} /> Appointments
+          <Calendar size={18} /> Appointments ({stats.totalAppointments})
         </Link>
         <Link
           href="/prescriptions"
@@ -150,7 +157,7 @@ export default function PatientDashboard() {
             fontSize: "0.9rem",
           }}
         >
-          <FileText size={18} /> Prescriptions
+          <FileText size={18} /> Prescriptions ({stats.prescriptions})
         </Link>
         <Link
           href="/medical-records"
@@ -165,22 +172,7 @@ export default function PatientDashboard() {
             fontSize: "0.9rem",
           }}
         >
-          <FileText size={18} /> Medical Reports
-        </Link>
-        <Link
-          href="/chat"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "12px",
-            padding: "12px 16px",
-            borderRadius: "var(--radius-md)",
-            color: "var(--text-muted)",
-            fontWeight: "500",
-            fontSize: "0.9rem",
-          }}
-        >
-          <MessageSquare size={18} /> Messages
+          <FileText size={18} /> Medical Reports ({stats.medicalReports})
         </Link>
 
         <button
@@ -195,12 +187,16 @@ export default function PatientDashboard() {
             color: "#DC2626",
             fontWeight: "600",
             fontSize: "0.9rem",
+            border: "none",
+            backgroundColor: "transparent",
+            cursor: "pointer",
           }}
         >
           <LogOut size={18} /> Logout
         </button>
       </aside>
 
+      {/* Main Dashboard Content */}
       <main style={{ flexGrow: 1, padding: "40px" }}>
         <div
           style={{
@@ -208,6 +204,8 @@ export default function PatientDashboard() {
             justifyContent: "space-between",
             alignItems: "center",
             marginBottom: "32px",
+            flexWrap: "wrap",
+            gap: "16px",
           }}
         >
           <div>
@@ -215,7 +213,7 @@ export default function PatientDashboard() {
               Welcome back, {user?.name}! 👋
             </h1>
             <p style={{ color: "var(--text-muted)", fontSize: "0.95rem", marginTop: "4px" }}>
-              Here is your healthcare consultation overview and upcoming medical schedules.
+              Here is your active healthcare dashboard and MongoDB appointment summary.
             </p>
           </div>
           <Link href="/doctors" className="btn btn-primary">
@@ -223,67 +221,74 @@ export default function PatientDashboard() {
           </Link>
         </div>
 
+        {/* Real Statistics Cards */}
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-            gap: "24px",
+            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+            gap: "20px",
             marginBottom: "36px",
           }}
         >
-          <div className="card-base" style={{ padding: "24px", backgroundColor: "#FFFFFF" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-              <span style={{ fontSize: "0.875rem", color: "var(--text-muted)", fontWeight: "600" }}>
+          <div className="card-base" style={{ padding: "20px", backgroundColor: "#FFFFFF" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+              <span style={{ fontSize: "0.85rem", color: "var(--text-muted)", fontWeight: "600" }}>
                 Upcoming Consultations
               </span>
-              <Calendar size={22} style={{ color: "var(--primary)" }} />
+              <Calendar size={20} style={{ color: "var(--primary)" }} />
             </div>
-            <h2 style={{ fontSize: "2rem", fontWeight: "800", color: "var(--text-dark)" }}>
-              {upcomingAppointments.length}
+            <h2 style={{ fontSize: "1.85rem", fontWeight: "800", color: "var(--text-dark)" }}>
+              {loading ? "..." : stats.upcomingAppointments}
             </h2>
           </div>
 
-          <div className="card-base" style={{ padding: "24px", backgroundColor: "#FFFFFF" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-              <span style={{ fontSize: "0.875rem", color: "var(--text-muted)", fontWeight: "600" }}>
-                Total Appointments
+          <div className="card-base" style={{ padding: "20px", backgroundColor: "#FFFFFF" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+              <span style={{ fontSize: "0.85rem", color: "var(--text-muted)", fontWeight: "600" }}>
+                Completed Consultations
               </span>
-              <Clock size={22} style={{ color: "var(--primary)" }} />
+              <CheckCircle2 size={20} style={{ color: "#047857" }} />
             </div>
-            <h2 style={{ fontSize: "2rem", fontWeight: "800", color: "var(--text-dark)" }}>
-              {appointments.length}
+            <h2 style={{ fontSize: "1.85rem", fontWeight: "800", color: "#047857" }}>
+              {loading ? "..." : stats.completedAppointments}
             </h2>
           </div>
 
-          <div className="card-base" style={{ padding: "24px", backgroundColor: "#FFFFFF" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-              <span style={{ fontSize: "0.875rem", color: "var(--text-muted)", fontWeight: "600" }}>
+          <div className="card-base" style={{ padding: "20px", backgroundColor: "#FFFFFF" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+              <span style={{ fontSize: "0.85rem", color: "var(--text-muted)", fontWeight: "600" }}>
                 Digital Prescriptions
               </span>
-              <FileText size={22} style={{ color: "var(--primary)" }} />
+              <Pill size={20} style={{ color: "var(--primary)" }} />
             </div>
-            <h2 style={{ fontSize: "2rem", fontWeight: "800", color: "var(--text-dark)" }}>
-              {prescriptions.length}
+            <h2 style={{ fontSize: "1.85rem", fontWeight: "800", color: "var(--text-dark)" }}>
+              {loading ? "..." : stats.prescriptions}
             </h2>
           </div>
 
-          <div className="card-base" style={{ padding: "24px", backgroundColor: "#FFFFFF" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-              <span style={{ fontSize: "0.875rem", color: "var(--text-muted)", fontWeight: "600" }}>
-                Uploaded Reports
+          <div className="card-base" style={{ padding: "20px", backgroundColor: "#FFFFFF" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+              <span style={{ fontSize: "0.85rem", color: "var(--text-muted)", fontWeight: "600" }}>
+                Medical Reports
               </span>
-              <FileText size={22} style={{ color: "var(--primary)" }} />
+              <FileText size={20} style={{ color: "var(--primary)" }} />
             </div>
-            <h2 style={{ fontSize: "2rem", fontWeight: "800", color: "var(--text-dark)" }}>
-              {reports.length}
+            <h2 style={{ fontSize: "1.85rem", fontWeight: "800", color: "var(--text-dark)" }}>
+              {loading ? "..." : stats.medicalReports}
             </h2>
           </div>
         </div>
 
+        {/* Upcoming Appointments Table */}
         <div className="card-base" style={{ padding: "28px", backgroundColor: "#FFFFFF", marginBottom: "36px" }}>
-          <h3 style={{ fontSize: "1.25rem", fontWeight: "700", marginBottom: "20px", fontFamily: "'Outfit', sans-serif" }}>
-            Upcoming Appointments
-          </h3>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+            <h3 style={{ fontSize: "1.2rem", fontWeight: "700", fontFamily: "'Outfit', sans-serif" }}>
+              Upcoming Doctor Appointments
+            </h3>
+            <Link href="/appointments" style={{ color: "var(--primary)", fontWeight: "600", fontSize: "0.9rem" }}>
+              View All Appointments →
+            </Link>
+          </div>
 
           {loading ? (
             <p style={{ color: "var(--text-muted)" }}>Loading appointments...</p>
@@ -296,7 +301,7 @@ export default function PatientDashboard() {
             </div>
           ) : (
             <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "0.925rem" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "0.9rem" }}>
                 <thead>
                   <tr style={{ borderBottom: "1px solid var(--border-color)", color: "var(--text-muted)" }}>
                     <th style={{ padding: "12px" }}>Doctor</th>
@@ -336,15 +341,14 @@ export default function PatientDashboard() {
                       </td>
                       <td style={{ padding: "16px 12px" }}>
                         <div style={{ display: "flex", gap: "8px" }}>
-                          <Link href="/consultation" className="btn btn-primary" style={{ padding: "6px 12px", fontSize: "0.8rem" }}>
-                            <Video size={14} /> Join Call
-                          </Link>
-                          <Link href="/chat" className="btn btn-outline" style={{ padding: "6px 12px", fontSize: "0.8rem" }}>
-                            <MessageSquare size={14} /> Chat
-                          </Link>
+                          {appt.consultationType === "video" && (
+                            <Link href="/consultation" className="btn btn-primary" style={{ padding: "6px 12px", fontSize: "0.8rem" }}>
+                              <Video size={14} /> Join Call
+                            </Link>
+                          )}
                           <button
                             onClick={() => handleCancelAppointment(appt._id)}
-                            style={{ padding: "6px 10px", color: "#DC2626", fontSize: "0.8rem", fontWeight: "600" }}
+                            style={{ padding: "6px 10px", color: "#DC2626", fontSize: "0.8rem", fontWeight: "600", border: "none", background: "none", cursor: "pointer" }}
                           >
                             Cancel
                           </button>
@@ -357,6 +361,50 @@ export default function PatientDashboard() {
             </div>
           )}
         </div>
+
+        {/* Recent Prescriptions Section */}
+        {recentPrescriptions.length > 0 && (
+          <div className="card-base" style={{ padding: "28px", backgroundColor: "#FFFFFF" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "18px" }}>
+              <h3 style={{ fontSize: "1.2rem", fontWeight: "700", fontFamily: "'Outfit', sans-serif" }}>
+                Recent Issued Prescriptions
+              </h3>
+              <Link href="/prescriptions" style={{ color: "var(--primary)", fontWeight: "600", fontSize: "0.9rem" }}>
+                View All Prescriptions →
+              </Link>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              {recentPrescriptions.map((rx) => (
+                <div
+                  key={rx._id}
+                  style={{
+                    padding: "16px",
+                    backgroundColor: "var(--bg-light)",
+                    borderRadius: "var(--radius-md)",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: "12px",
+                  }}
+                >
+                  <div>
+                    <h4 style={{ fontSize: "1rem", fontWeight: "700" }}>
+                      Dr. {rx.doctorId?.name || "Consultant"} ({rx.doctorId?.specialization || "Doctor"})
+                    </h4>
+                    <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginTop: "2px" }}>
+                      Medicines: {rx.medicines?.map((m) => m.name).join(", ")}
+                    </p>
+                  </div>
+                  <Link href="/prescriptions" className="btn btn-outline" style={{ padding: "6px 12px", fontSize: "0.8rem" }}>
+                    View Rx Details
+                  </Link>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );
