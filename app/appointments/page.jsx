@@ -332,12 +332,20 @@ export default function AppointmentsPage() {
                   {/* Actions Column */}
                   <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
                     {(appt.status === "confirmed" || appt.status === "pending") && appt.consultationType === "video" && (
-                      <Link href="/consultation" className="btn btn-primary" style={{ padding: "8px 16px", fontSize: "0.85rem" }}>
+                      <Link
+                        href={`/consultation?appointmentId=${appt._id}`}
+                        className="btn btn-primary"
+                        style={{ padding: "8px 16px", fontSize: "0.85rem", gap: "6px" }}
+                      >
                         <Video size={16} /> Join Consultation
                       </Link>
                     )}
 
-                    <Link href="/chat" className="btn btn-outline" style={{ padding: "8px 16px", fontSize: "0.85rem" }}>
+                    <Link
+                      href={`/chat?appointmentId=${appt._id}`}
+                      className="btn btn-outline"
+                      style={{ padding: "8px 16px", fontSize: "0.85rem", gap: "6px" }}
+                    >
                       <MessageSquare size={16} /> Message
                     </Link>
 

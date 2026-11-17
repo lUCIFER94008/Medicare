@@ -395,7 +395,7 @@ export default function HomePage() {
                 title: "Online Consultation",
                 desc: "Join secure video consultations from your browser.",
                 icon: Video,
-                href: "/consultation",
+                href: "/appointments",
               },
               {
                 title: "Digital Prescriptions",

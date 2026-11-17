@@ -342,7 +342,11 @@ export default function PatientDashboard() {
                       <td style={{ padding: "16px 12px" }}>
                         <div style={{ display: "flex", gap: "8px" }}>
                           {appt.consultationType === "video" && (
-                            <Link href="/consultation" className="btn btn-primary" style={{ padding: "6px 12px", fontSize: "0.8rem" }}>
+                            <Link
+                              href={`/consultation?appointmentId=${appt._id}`}
+                              className="btn btn-primary"
+                              style={{ padding: "6px 12px", fontSize: "0.8rem", gap: "6px" }}
+                            >
                               <Video size={14} /> Join Call
                             </Link>
                           )}

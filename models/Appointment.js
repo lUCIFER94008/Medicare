@@ -39,6 +39,21 @@ const appointmentSchema = new mongoose.Schema(
       enum: ["video", "chat", "in-person"],
       default: "video",
     },
+    consultationStatus: {
+      type: String,
+      enum: ["not_started", "waiting", "ongoing", "completed", "cancelled"],
+      default: "not_started",
+    },
+    consultationStartedAt: {
+      type: Date,
+    },
+    consultationEndedAt: {
+      type: Date,
+    },
+    consultationRoomId: {
+      type: String,
+      default: "",
+    },
     notes: {
       type: String,
       default: "",

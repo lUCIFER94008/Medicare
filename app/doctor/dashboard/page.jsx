@@ -358,7 +358,11 @@ export default function DoctorDashboard() {
                           )}
                           {appt.status === "confirmed" && (
                             <>
-                              <Link href="/consultation" className="btn btn-primary" style={{ padding: "6px 12px", fontSize: "0.8rem" }}>
+                              <Link
+                                href={`/consultation?appointmentId=${appt._id}`}
+                                className="btn btn-primary"
+                                style={{ padding: "6px 12px", fontSize: "0.8rem", gap: "6px" }}
+                              >
                                 <Video size={14} /> Video Call
                               </Link>
                               <button
@@ -370,7 +374,11 @@ export default function DoctorDashboard() {
                               </button>
                             </>
                           )}
-                          <Link href="/chat" className="btn btn-outline" style={{ padding: "6px 12px", fontSize: "0.8rem" }}>
+                          <Link
+                            href={`/chat?appointmentId=${appt._id}`}
+                            className="btn btn-outline"
+                            style={{ padding: "6px 12px", fontSize: "0.8rem" }}
+                          >
                             Chat
                           </Link>
                         </div>
