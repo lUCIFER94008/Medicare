@@ -38,6 +38,44 @@ async function postJSON(urlPath, data, token = null) {
   });
 }
 
+async function putJSON(urlPath, data, token = null) {
+  return new Promise((resolve, reject) => {
+    const postData = JSON.stringify(data);
+    const headers = {
+      "Content-Type": "application/json",
+      "Content-Length": Buffer.byteLength(postData),
+    };
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    const req = http.request(
+      {
+        hostname: "localhost",
+        port: 3000,
+        path: urlPath,
+        method: "PUT",
+        headers,
+      },
+      (res) => {
+        let body = "";
+        res.on("data", (chunk) => (body += chunk));
+        res.on("end", () => {
+          try {
+            resolve({ status: res.statusCode, data: JSON.parse(body) });
+          } catch (e) {
+            resolve({ status: res.statusCode, text: body });
+          }
+        });
+      }
+    );
+
+    req.on("error", reject);
+    req.write(postData);
+    req.end();
+  });
+}
+
 async function getJSON(urlPath, token = null) {
   return new Promise((resolve, reject) => {
     const headers = {};
@@ -107,23 +145,29 @@ async function runTest() {
 
   if (!appointment) {
     console.log("Creating new test video appointment...");
-    // Create one if none found
-    const docProfile = await getJSON("/api/doctors", patientToken);
-    const docId = docProfile.data.data[0]._id;
+    const docId = docLogin.data.user.doctorProfile?._id;
+    const rndHour = Math.floor(Math.random() * 11) + 1;
+    const rndMin = Math.floor(Math.random() * 50) + 10;
     const createRes = await postJSON(
       "/api/appointments",
       {
         doctorId: docId,
-        appointmentDate: "2026-11-20",
-        appointmentTime: "10:00 AM",
+        appointmentDate: "2026-11-28",
+        appointmentTime: `${rndHour}:${rndMin} PM`,
         reason: "Test WebRTC Video Consultation",
         consultationType: "video",
       },
       patientToken
     );
-    appointment = createRes.data.data;
-    // Confirm it
-    await postJSON(`/api/appointments/${appointment._id}`, { status: "confirmed" }, doctorToken);
+    appointment = createRes.data?.data;
+    if (appointment?._id) {
+      await putJSON(`/api/appointments/${appointment._id}`, { status: "confirmed" }, doctorToken);
+    } else {
+      // Fallback: pick any video appointment from patient for this doctor
+      const allAppts = await getJSON("/api/appointments", doctorToken);
+      appointment = allAppts.data.data.find((a) => a.consultationType === "video") || allAppts.data.data[0];
+      await putJSON(`/api/appointments/${appointment._id}`, { status: "confirmed" }, doctorToken);
+    }
   }
 
   const appointmentId = appointment._id;

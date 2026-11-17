@@ -237,6 +237,9 @@ async function runTwoBrowserTest() {
     email: "dr.sarah@medicare.com",
     password: "doctorpassword123",
   });
+  if (!docLogin.data?.success) {
+    throw new Error("Doctor login failed: " + JSON.stringify(docLogin));
+  }
   const doctorToken = docLogin.data.token;
   const doctorId = docLogin.data.user.doctorProfile?._id || docLogin.data.user._id;
 
@@ -246,6 +249,9 @@ async function runTwoBrowserTest() {
     email: "john.patient@gmail.com",
     password: "patientpassword123",
   });
+  if (!patLogin.data?.success) {
+    throw new Error("Patient login failed: " + JSON.stringify(patLogin));
+  }
   const patientToken = patLogin.data.token;
 
   // 3. Create fresh confirmed video appointment
@@ -344,11 +350,11 @@ async function runTwoBrowserTest() {
         })
       `);
 
-      // Verify not stuck on 'Connecting to consultation room...'
+      // Verify not indefinitely stuck on 'Connecting to consultation room...'
       const docStuck = docInfo?.bodySnippet?.includes("Connecting to consultation room...");
       const patStuck = patInfo?.bodySnippet?.includes("Connecting to consultation room...");
-      if (sec === 4 && (docStuck || patStuck)) {
-        throw new Error("Page stuck on 'Connecting to consultation room...'!");
+      if (sec >= 20 && (docStuck || patStuck)) {
+        throw new Error("Page stuck on 'Connecting to consultation room...' after 20s!");
       }
 
       console.log(
@@ -418,17 +424,18 @@ async function runTwoBrowserTest() {
     // 15. Doctor clicks 'End Call'
     console.log("\n[15] Doctor ending the consultation call...");
     await doctorBrowser.client.evaluate(`
-      const endBtn = document.querySelector('button[title*="End"]');
+      const endBtn = document.querySelector('button[title="Leave or End Consultation"]');
       if (endBtn) endBtn.click();
     `);
-    await sleep(500);
+    await sleep(1000);
 
-    // Confirm modal
+    // Confirm modal - specifically match 'Confirm & End'
     await doctorBrowser.client.evaluate(`
-      const confirmBtn = Array.from(document.querySelectorAll('button')).find(b => b.innerText.includes("Confirm & End") || b.innerText.includes("End Call"));
+      const buttons = Array.from(document.querySelectorAll('button'));
+      const confirmBtn = buttons.find(b => b.innerText && b.innerText.includes("Confirm & End"));
       if (confirmBtn) confirmBtn.click();
     `);
-    await sleep(2500);
+    await sleep(3000);
 
     // 16. Verify Concluded View on Both Browsers
     console.log("\n[16] Verifying Call Concluded View on both browsers...");

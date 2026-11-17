@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 import connectDB from "@/lib/mongodb";
 import Appointment from "@/models/Appointment";
 import ConsultationSignal from "@/models/ConsultationSignal";
@@ -119,6 +120,7 @@ export async function GET(req) {
     const { searchParams } = new URL(req.url);
     const appointmentId = searchParams.get("appointmentId");
     const after = searchParams.get("after"); // ISO string timestamp
+    const afterId = searchParams.get("afterId"); // MongoDB ObjectId string
 
     if (!appointmentId) {
       return NextResponse.json(
@@ -161,12 +163,17 @@ export async function GET(req) {
       senderId: { $ne: user._id }, // Only retrieve signals from OTHER peer
     };
 
-    if (after) {
+    if (afterId && mongoose.isValidObjectId(afterId)) {
+      query._id = { $gt: new mongoose.Types.ObjectId(afterId) };
+    } else if (after) {
       query.createdAt = { $gt: new Date(after) };
+    } else {
+      // Recent signals from the last 15 minutes to ignore stale prior calls
+      query.createdAt = { $gt: new Date(Date.now() - 15 * 60 * 1000) };
     }
 
     const signals = await ConsultationSignal.find(query)
-      .sort({ createdAt: 1 })
+      .sort({ _id: 1 })
       .limit(50);
 
     return NextResponse.json({

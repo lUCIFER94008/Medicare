@@ -27,6 +27,8 @@ import {
   ArrowLeft,
   UserCheck,
   Volume2,
+  Terminal,
+  Activity,
 } from "lucide-react";
 
 export default function ConsultationClient() {
@@ -46,12 +48,26 @@ export default function ConsultationClient() {
   const [connectionState, setConnectionState] = useState("initializing");
   const [connectionMessage, setConnectionMessage] = useState("Initializing consultation room...");
 
+  // Media Streams State
+  const [localStream, setLocalStream] = useState(null);
+  const [remoteStream, setRemoteStream] = useState(null);
+
   // Media Track States
   const [micActive, setMicActive] = useState(true);
   const [cameraActive, setCameraActive] = useState(true);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [mediaPermissionDenied, setMediaPermissionDenied] = useState(false);
   const [mediaErrorMessage, setMediaErrorMessage] = useState("");
+
+  // Diagnostic panel & telemetry
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
+  const [signalingConnected, setSignalingConnected] = useState(false);
+  const [remoteConnected, setRemoteConnected] = useState(false);
+  const [pcState, setPcState] = useState("new");
+  const [iceState, setIceState] = useState("new");
+  const [iceGatheringState, setIceGatheringState] = useState("new");
+  const [signalingState, setSignalingState] = useState("stable");
+  const [signalStats, setSignalStats] = useState({ sent: 0, received: 0 });
 
   // Call duration counter
   const [callDuration, setCallDuration] = useState(0);
@@ -64,25 +80,45 @@ export default function ConsultationClient() {
   const [chatInput, setChatInput] = useState("");
   const [sendingMsg, setSendingMsg] = useState(false);
 
-  // Refs for WebRTC and Media
+  // Refs for WebRTC and Media to prevent closure staleness
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const localStreamRef = useRef(null);
+  const remoteStreamRef = useRef(null);
   const screenStreamRef = useRef(null);
   const peerConnectionRef = useRef(null);
+
+  // Room & Role Refs
+  const roomDataRef = useRef(null);
+  const myRoleRef = useRef(null);
+  const roomIdRef = useRef(null);
   const iceServersRef = useRef([
     { urls: "stun:stun.l.google.com:19302" },
     { urls: "stun:stun1.l.google.com:19302" },
+    { urls: "stun:stun2.l.google.com:19302" },
+    { urls: "stun:stun3.l.google.com:19302" },
+    { urls: "stun:stun4.l.google.com:19302" },
+    { urls: "stun:global.stun.twilio.com:3478" },
   ]);
 
-  // Signaling refs
+  // Signaling & Negotiation Refs
   const pollingIntervalRef = useRef(null);
-  const lastSignalTimeRef = useRef(new Date(Date.now() - 60000).toISOString());
+  const lastSignalIdRef = useRef(null);
   const iceCandidateQueueRef = useRef([]);
-  const hasCreatedOfferRef = useRef(false);
+  const makingOfferRef = useRef(false);
+  const ignoreOfferRef = useRef(false);
+  const isSettingRemoteAnswerPendingRef = useRef(false);
   const messagesEndRef = useRef(null);
 
-  // 1. Authentication & Room Verification
+  // Sync state to refs immediately
+  const updateRoomData = (data) => {
+    roomDataRef.current = data;
+    myRoleRef.current = data?.roleInCall || null;
+    roomIdRef.current = data?.roomId || `consultation_room_${appointmentId}`;
+    setRoomData(data);
+  };
+
+  // 1. Authentication & Room Verification Lifecycle
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       router.push(`/login?redirect=${encodeURIComponent(`/consultation?appointmentId=${appointmentId || ""}`)}`);
@@ -104,7 +140,31 @@ export default function ConsultationClient() {
     };
   }, [user, appointmentId, authLoading, isAuthenticated]);
 
-  // 2. Timer when connected
+  // 2. Attach Local Video whenever DOM element or stream updates
+  useEffect(() => {
+    if (localVideoRef.current && localStreamRef.current) {
+      if (localVideoRef.current.srcObject !== localStreamRef.current) {
+        localVideoRef.current.srcObject = localStreamRef.current;
+        localVideoRef.current.play().catch((err) => {
+          console.warn("[WebRTC] Local video play error:", err);
+        });
+      }
+    }
+  }, [loading, localStream]);
+
+  // 3. Attach Remote Video whenever DOM element or stream updates
+  useEffect(() => {
+    if (remoteVideoRef.current && remoteStreamRef.current) {
+      if (remoteVideoRef.current.srcObject !== remoteStreamRef.current) {
+        remoteVideoRef.current.srcObject = remoteStreamRef.current;
+        remoteVideoRef.current.play().catch((err) => {
+          console.warn("[WebRTC] Remote video play error:", err);
+        });
+      }
+    }
+  }, [loading, remoteStream, connectionState]);
+
+  // 4. Timer when connected
   useEffect(() => {
     let timer = null;
     if (isTimerRunning) {
@@ -117,14 +177,14 @@ export default function ConsultationClient() {
     };
   }, [isTimerRunning]);
 
-  // 3. Scroll chat to bottom
+  // 5. Scroll chat to bottom
   useEffect(() => {
     if (chatOpen) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages, chatOpen]);
 
-  // 4. In-Call Chat polling
+  // 6. In-Call Chat polling
   useEffect(() => {
     if (chatOpen && appointmentId) {
       fetchChatMessages();
@@ -143,7 +203,8 @@ export default function ConsultationClient() {
 
       const res = await apiGet(`/consultation/room?appointmentId=${appointmentId}`);
       if (res.success && res.data) {
-        setRoomData(res.data);
+        updateRoomData(res.data);
+
         if (res.data.iceServers && res.data.iceServers.length > 0) {
           iceServersRef.current = res.data.iceServers;
         }
@@ -182,18 +243,25 @@ export default function ConsultationClient() {
       let stream = null;
       try {
         stream = await navigator.mediaDevices.getUserMedia({
-          video: { width: { ideal: 1280 }, height: { ideal: 720 } },
-          audio: { echoCancellation: true, noiseSuppression: true },
+          video: {
+            width: { ideal: 1280, max: 1920 },
+            height: { ideal: 720, max: 1080 },
+            facingMode: "user",
+          },
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
         });
       } catch (mediaErr) {
-        console.warn("[getUserMedia Failed, attempting fallback audio/video]:", mediaErr);
+        console.warn("[getUserMedia error, evaluating cause]:", mediaErr);
         if (mediaErr.name === "NotAllowedError" || mediaErr.name === "PermissionDeniedError") {
           setMediaPermissionDenied(true);
           setMediaErrorMessage("Camera and microphone permission was denied. Please allow access in browser site settings.");
           setConnectionState("error");
           return;
         } else if (mediaErr.name === "NotFoundError" || mediaErr.name === "DevicesNotFoundError") {
-          // Attempt audio-only fallback if video camera is missing
           try {
             stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
             setCameraActive(false);
@@ -202,8 +270,8 @@ export default function ConsultationClient() {
             setConnectionState("error");
             return;
           }
-        } else if (mediaErr.name === "NotReadableError") {
-          setMediaErrorMessage("Your camera or microphone is in use by another program (e.g. Zoom, Teams). Please close it and retry.");
+        } else if (mediaErr.name === "NotReadableError" || mediaErr.name === "TrackStartError") {
+          setMediaErrorMessage("Your camera or microphone is currently in use by another program. Please close it and retry.");
           setConnectionState("error");
           return;
         } else {
@@ -213,23 +281,37 @@ export default function ConsultationClient() {
         }
       }
 
+      // Verify track states
+      const vTracks = stream.getVideoTracks();
+      const aTracks = stream.getAudioTracks();
+      console.log(`[Media Initialized] Video tracks: ${vTracks.length}, Audio tracks: ${aTracks.length}`);
+
       localStreamRef.current = stream;
+      setLocalStream(stream);
+
+      // Force attach to video element if it already exists
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = stream;
+        localVideoRef.current.play().catch((err) => console.warn("[WebRTC] Play promise notice:", err));
       }
 
       // Initialize WebRTC Peer Connection
       initializePeerConnection(room);
 
-      // Send 'join' signal and start signal polling
-      await sendSignal("join", { role: room.roleInCall, name: user.name });
-      setConnectionState("waiting");
-      setConnectionMessage(
-        room.roleInCall === "doctor"
-          ? `Waiting for patient ${room.patient?.name || ""} to join...`
-          : `Waiting for Dr. ${room.doctor?.name || ""} to connect...`
-      );
+      // Log role-specific join message
+      const role = room.roleInCall;
+      if (role === "doctor") {
+        console.log("[WebRTC] Doctor joined room");
+      } else {
+        console.log("[WebRTC] Patient joined room");
+      }
 
+      // Send 'join' signal to signaling backend
+      await sendSignal("join", { role, name: user?.name });
+      setConnectionState("waiting");
+      setConnectionMessage("Waiting for the other participant...");
+
+      // Start Signal Polling
       startSignalPolling();
     } catch (err) {
       console.error("[Media & Join Error]:", err);
@@ -238,10 +320,12 @@ export default function ConsultationClient() {
     }
   };
 
-  // Initialize RTCPeerConnection with STUN configuration
+  // Initialize RTCPeerConnection with STUN/TURN configuration
   const initializePeerConnection = (room) => {
     if (peerConnectionRef.current) {
-      peerConnectionRef.current.close();
+      try {
+        peerConnectionRef.current.close();
+      } catch (e) {}
     }
 
     const pc = new RTCPeerConnection({
@@ -250,6 +334,9 @@ export default function ConsultationClient() {
     });
 
     peerConnectionRef.current = pc;
+    setPcState(pc.connectionState || "new");
+    setIceState(pc.iceConnectionState || "new");
+    setSignalingState(pc.signalingState || "stable");
 
     // Add local tracks to peer connection
     if (localStreamRef.current) {
@@ -261,13 +348,30 @@ export default function ConsultationClient() {
     // Remote track arrived
     pc.ontrack = (event) => {
       console.log("[WebRTC] Received remote stream track:", event.track.kind);
-      if (event.streams && event.streams[0]) {
-        if (remoteVideoRef.current) {
-          remoteVideoRef.current.srcObject = event.streams[0];
+      let stream = event.streams && event.streams[0];
+      if (!stream) {
+        if (!remoteStreamRef.current) {
+          remoteStreamRef.current = new MediaStream();
         }
-        setConnectionState("connected");
-        setIsTimerRunning(true);
+        remoteStreamRef.current.addTrack(event.track);
+        stream = remoteStreamRef.current;
+      } else {
+        remoteStreamRef.current = stream;
       }
+
+      setRemoteStream(stream);
+      setRemoteConnected(true);
+
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = stream;
+        remoteVideoRef.current.play().catch((err) => {
+          console.warn("[WebRTC] Autoplay restricted on remote video:", err);
+        });
+      }
+
+      setConnectionState("connected");
+      setConnectionMessage("Connected");
+      setIsTimerRunning(true);
     };
 
     // ICE candidate generated locally -> send via signaling
@@ -279,30 +383,50 @@ export default function ConsultationClient() {
 
     // Connection state changes
     pc.onconnectionstatechange = () => {
-      console.log("[WebRTC Connection State]:", pc.connectionState);
-      if (pc.connectionState === "connected") {
+      const state = pc.connectionState;
+      console.log("[WebRTC] Peer connection state:", state);
+      setPcState(state);
+
+      if (state === "connected") {
+        console.log("[WebRTC] Peer connection state: connected");
         setConnectionState("connected");
+        setConnectionMessage("Connected");
         setIsTimerRunning(true);
-      } else if (pc.connectionState === "disconnected") {
+      } else if (state === "disconnected") {
         setConnectionState("reconnecting");
         setConnectionMessage("Connection interrupted. Re-establishing link...");
-      } else if (pc.connectionState === "failed") {
-        setConnectionState("reconnecting");
-        setConnectionMessage("Connection failed. Attempting ICE restart...");
+      } else if (state === "failed") {
+        console.warn("[WebRTC] Peer connection failed. Attempting ICE restart...");
         restartIce();
-      } else if (pc.connectionState === "closed") {
+      } else if (state === "closed") {
         setIsTimerRunning(false);
       }
     };
 
+    // ICE Connection state changes
     pc.oniceconnectionstatechange = () => {
-      console.log("[WebRTC ICE State]:", pc.iceConnectionState);
-      if (pc.iceConnectionState === "connected" || pc.iceConnectionState === "completed") {
+      const iceConnState = pc.iceConnectionState;
+      console.log("[WebRTC] ICE connection state:", iceConnState);
+      setIceState(iceConnState);
+
+      if (iceConnState === "connected" || iceConnState === "completed") {
         setConnectionState("connected");
+        setConnectionMessage("Connected");
         setIsTimerRunning(true);
-      } else if (pc.iceConnectionState === "failed") {
+      } else if (iceConnState === "failed") {
+        console.warn("[WebRTC] ICE connection failed.");
         restartIce();
       }
+    };
+
+    // ICE Gathering State
+    pc.onicegatheringstatechange = () => {
+      setIceGatheringState(pc.iceGatheringState);
+    };
+
+    // Signaling State
+    pc.onsignalingstatechange = () => {
+      setSignalingState(pc.signalingState);
     };
 
     return pc;
@@ -311,6 +435,7 @@ export default function ConsultationClient() {
   // Send a signal via POST /api/consultation/signal
   const sendSignal = async (type, payload) => {
     try {
+      setSignalStats((prev) => ({ ...prev, sent: prev.sent + 1 }));
       await apiPost("/consultation/signal", {
         appointmentId,
         type,
@@ -321,74 +446,104 @@ export default function ConsultationClient() {
     }
   };
 
-  // Signal Polling Loop
+  // Signal Polling Loop using Mongo ObjectId cursor to prevent missed signals & clock skew
   const startSignalPolling = () => {
     if (pollingIntervalRef.current) {
       clearInterval(pollingIntervalRef.current);
     }
 
+    console.log("[WebRTC] Socket connected");
+    setSignalingConnected(true);
+
     pollingIntervalRef.current = setInterval(async () => {
       try {
-        const res = await apiGet(`/consultation/signal?appointmentId=${appointmentId}&after=${encodeURIComponent(lastSignalTimeRef.current)}`);
+        const queryParam = lastSignalIdRef.current
+          ? `afterId=${encodeURIComponent(lastSignalIdRef.current)}`
+          : "";
+        const url = `/consultation/signal?appointmentId=${appointmentId}${queryParam ? `&${queryParam}` : ""}`;
+
+        const res = await apiGet(url);
         if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+          setSignalStats((prev) => ({ ...prev, received: prev.received + res.data.length }));
+
           for (const signal of res.data) {
-            lastSignalTimeRef.current = signal.createdAt;
+            lastSignalIdRef.current = signal._id;
             await handleIncomingSignal(signal);
           }
         }
       } catch (err) {
         console.warn("[Signal Poll Error]:", err);
       }
-    }, 1000);
+    }, 750);
   };
 
-  // Handle incoming signaling messages from peer
+  // Handle incoming signaling messages from peer using Perfect Negotiation
   const handleIncomingSignal = async (signal) => {
     const pc = peerConnectionRef.current;
     if (!pc) return;
 
     const { type, payload } = signal;
-    console.log("[Incoming Signal]:", type);
+    const myRole = myRoleRef.current;
+    const isPolite = myRole !== "doctor"; // Doctor is impolite, Patient is polite
 
     switch (type) {
       case "join": {
-        // Other participant joined! Send a "ready" signal and create offer if doctor/initiator
+        console.log("[WebRTC] Remote participant detected");
         setConnectionState("connecting");
-        setConnectionMessage("Partner joined room. Establishing encrypted peer stream...");
-        await sendSignal("ready", { role: roomData?.roleInCall });
-        if (roomData?.roleInCall === "doctor" && !hasCreatedOfferRef.current) {
+        setConnectionMessage("Establishing secure video connection...");
+
+        // Respond with ready signal
+        await sendSignal("ready", { role: myRole });
+
+        // Deterministic offer creation: Doctor initiates SDP offer
+        if (myRole === "doctor") {
           await createAndSendOffer();
         }
         break;
       }
 
       case "ready": {
-        // Other participant is ready
+        console.log("[WebRTC] Remote participant detected");
         setConnectionState("connecting");
-        setConnectionMessage("Handshaking peer connection...");
-        if (roomData?.roleInCall === "doctor" && !hasCreatedOfferRef.current) {
+        setConnectionMessage("Establishing secure video connection...");
+
+        // If I am the doctor and haven't created an offer yet, initiate now
+        if (myRole === "doctor" && pc.signalingState === "stable") {
           await createAndSendOffer();
         }
         break;
       }
 
       case "offer": {
-        // Received SDP offer
+        console.log("[WebRTC] Offer received from peer");
         try {
-          hasCreatedOfferRef.current = true;
-          setConnectionState("connecting");
-          setConnectionMessage("Receiving video feed...");
+          const offerCollision = makingOfferRef.current || pc.signalingState !== "stable";
+          ignoreOfferRef.current = !isPolite && offerCollision;
 
-          await pc.setRemoteDescription(new RTCSessionDescription(payload));
-
-          // Drain any queued ICE candidates
-          while (iceCandidateQueueRef.current.length > 0) {
-            const candidate = iceCandidateQueueRef.current.shift();
-            await pc.addIceCandidate(new RTCIceCandidate(candidate)).catch((e) => console.warn(e));
+          if (ignoreOfferRef.current) {
+            console.warn("[WebRTC] Impolite peer ignoring conflicting offer");
+            return;
           }
 
+          if (offerCollision && isPolite) {
+            console.log("[WebRTC] Polite peer rolling back for incoming offer");
+            await pc.setLocalDescription({ type: "rollback" });
+          }
+
+          setConnectionState("connecting");
+          setConnectionMessage("Establishing secure video connection...");
+
+          await pc.setRemoteDescription(new RTCSessionDescription(payload));
+          console.log("[WebRTC] Remote description (offer) set successfully");
+
+          // Drain any queued ICE candidates
+          await drainIceCandidates();
+
+          // Create and set local answer
           const answer = await pc.createAnswer();
           await pc.setLocalDescription(answer);
+          console.log("[WebRTC] Answer created");
+
           await sendSignal("answer", answer);
         } catch (err) {
           console.error("[Handle Offer Error]:", err);
@@ -397,15 +552,16 @@ export default function ConsultationClient() {
       }
 
       case "answer": {
-        // Received SDP answer
+        console.log("[WebRTC] Answer received");
         try {
           if (pc.signalingState === "have-local-offer") {
             await pc.setRemoteDescription(new RTCSessionDescription(payload));
+            console.log("[WebRTC] Remote description (answer) set successfully");
+
             // Drain any queued ICE candidates
-            while (iceCandidateQueueRef.current.length > 0) {
-              const candidate = iceCandidateQueueRef.current.shift();
-              await pc.addIceCandidate(new RTCIceCandidate(candidate)).catch((e) => console.warn(e));
-            }
+            await drainIceCandidates();
+          } else {
+            console.warn("[WebRTC] Received answer but signalingState is:", pc.signalingState);
           }
         } catch (err) {
           console.error("[Handle Answer Error]:", err);
@@ -414,7 +570,7 @@ export default function ConsultationClient() {
       }
 
       case "ice-candidate": {
-        // Received ICE candidate from peer
+        console.log("[WebRTC] ICE candidate received");
         if (payload) {
           try {
             if (pc.remoteDescription && pc.remoteDescription.type) {
@@ -431,7 +587,6 @@ export default function ConsultationClient() {
 
       case "end-call":
       case "leave": {
-        // Peer ended or left the call
         setCallEnded(true);
         setCallEndedReason("The other participant has ended the consultation session.");
         setConnectionState("ended");
@@ -444,34 +599,77 @@ export default function ConsultationClient() {
     }
   };
 
+  // Drain Queued ICE Candidates after remote description is ready
+  const drainIceCandidates = async () => {
+    const pc = peerConnectionRef.current;
+    if (!pc || !pc.remoteDescription) return;
+
+    while (iceCandidateQueueRef.current.length > 0) {
+      const candidate = iceCandidateQueueRef.current.shift();
+      try {
+        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+      } catch (e) {
+        console.warn("[WebRTC] Error adding drained ICE candidate:", e);
+      }
+    }
+  };
+
   // Create and send SDP Offer
   const createAndSendOffer = async () => {
     const pc = peerConnectionRef.current;
     if (!pc) return;
 
     try {
-      hasCreatedOfferRef.current = true;
+      makingOfferRef.current = true;
       const offer = await pc.createOffer({
         offerToReceiveAudio: true,
         offerToReceiveVideo: true,
       });
+
+      if (pc.signalingState !== "stable") {
+        console.warn("[WebRTC] Signaling state not stable before local offer, skipping");
+        return;
+      }
+
       await pc.setLocalDescription(offer);
+      console.log("[WebRTC] Offer created");
       await sendSignal("offer", offer);
     } catch (err) {
       console.error("[Create Offer Error]:", err);
+    } finally {
+      makingOfferRef.current = false;
     }
   };
 
-  // Restart ICE on network recovery
+  // Restart ICE on connection failure
   const restartIce = async () => {
     const pc = peerConnectionRef.current;
     if (!pc) return;
     try {
+      console.log("[WebRTC] Initiating ICE restart offer...");
       const offer = await pc.createOffer({ iceRestart: true });
       await pc.setLocalDescription(offer);
       await sendSignal("offer", offer);
     } catch (err) {
       console.warn("[ICE Restart Error]:", err);
+    }
+  };
+
+  // Manual Retry Connection handler
+  const handleRetryConnection = async () => {
+    console.log("[WebRTC] Manual Retry Connection requested");
+    setConnectionState("connecting");
+    setConnectionMessage("Establishing secure video connection...");
+
+    if (roomDataRef.current) {
+      initializePeerConnection(roomDataRef.current);
+      iceCandidateQueueRef.current = [];
+      await sendSignal("join", { role: myRoleRef.current, name: user?.name });
+      if (myRoleRef.current === "doctor") {
+        await createAndSendOffer();
+      }
+    } else {
+      fetchRoomDetails();
     }
   };
 
@@ -582,6 +780,12 @@ export default function ConsultationClient() {
       screenStreamRef.current.getTracks().forEach((track) => track.stop());
       screenStreamRef.current = null;
     }
+    if (localVideoRef.current) {
+      localVideoRef.current.srcObject = null;
+    }
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = null;
+    }
   };
 
   const cleanupCall = () => {
@@ -593,11 +797,14 @@ export default function ConsultationClient() {
     }
 
     if (peerConnectionRef.current) {
-      peerConnectionRef.current.close();
+      try {
+        peerConnectionRef.current.close();
+      } catch (e) {}
       peerConnectionRef.current = null;
     }
 
     setIsTimerRunning(false);
+    setSignalingConnected(false);
   };
 
   // In-call chat operations
@@ -757,17 +964,27 @@ export default function ConsultationClient() {
     );
   }
 
-  // Active Video Call Interface
+  // Active Video Call Interface Variables
   const isDoctor = roomData?.roleInCall === "doctor";
   const doctor = roomData?.doctor || {};
   const patient = roomData?.patient || {};
   const partnerName = isDoctor ? patient.name || "Patient" : `Dr. ${doctor.name || "Doctor"}`;
   const partnerRole = isDoctor ? "Patient" : doctor.specialization || "Specialist";
 
+  // Dynamic Status Text according to Section 11
+  let displayStatus = "Waiting for the other participant...";
+  if (connectionState === "connected") {
+    displayStatus = "Connected";
+  } else if (connectionState === "connecting") {
+    displayStatus = "Establishing secure video connection...";
+  } else if (connectionState === "error") {
+    displayStatus = "Unable to establish video connection.";
+  }
+
   return (
     <div
       style={{
-        backgroundColor: "#0B1512", // Deep medical dark green-black for crystal video contrast
+        backgroundColor: "#0B1512",
         color: "#FFFFFF",
         minHeight: "calc(100vh - 76px)",
         display: "flex",
@@ -819,8 +1036,28 @@ export default function ConsultationClient() {
           </div>
         </div>
 
-        {/* Center / Right Call Status and Timer */}
-        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+        {/* Center / Right Call Status, Timer and Diagnostics Toggle */}
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <button
+            onClick={() => setShowDiagnostics(!showDiagnostics)}
+            style={{
+              backgroundColor: showDiagnostics ? "var(--primary)" : "rgba(255, 255, 255, 0.1)",
+              border: "1px solid rgba(221, 247, 236, 0.2)",
+              color: "#FFFFFF",
+              padding: "4px 10px",
+              borderRadius: "var(--radius-full)",
+              fontSize: "0.75rem",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              cursor: "pointer",
+            }}
+            title="Toggle Developer Diagnostic Panel"
+          >
+            <Activity size={14} />
+            Diagnostics
+          </button>
+
           {isTimerRunning ? (
             <div
               style={{
@@ -842,16 +1079,15 @@ export default function ConsultationClient() {
           ) : (
             <span
               style={{
-                backgroundColor: connectionState === "connected" ? "rgba(16, 185, 129, 0.2)" : "rgba(245, 158, 11, 0.2)",
-                color: connectionState === "connected" ? "#10B981" : "#F59E0B",
+                backgroundColor: connectionState === "connected" ? "rgba(16, 185, 129, 0.2)" : connectionState === "error" ? "rgba(239, 68, 68, 0.2)" : "rgba(245, 158, 11, 0.2)",
+                color: connectionState === "connected" ? "#10B981" : connectionState === "error" ? "#EF4444" : "#F59E0B",
                 padding: "4px 12px",
                 borderRadius: "var(--radius-full)",
                 fontSize: "0.8rem",
                 fontWeight: "600",
-                textTransform: "capitalize",
               }}
             >
-              ● {connectionState.replace("_", " ")}
+              ● {displayStatus}
             </span>
           )}
         </div>
@@ -877,7 +1113,13 @@ export default function ConsultationClient() {
         >
           {/* Remote Live Video Element */}
           <video
-            ref={remoteVideoRef}
+            ref={(el) => {
+              remoteVideoRef.current = el;
+              if (el && remoteStreamRef.current && el.srcObject !== remoteStreamRef.current) {
+                el.srcObject = remoteStreamRef.current;
+                el.play().catch(() => {});
+              }
+            }}
             autoPlay
             playsInline
             style={{
@@ -912,16 +1154,22 @@ export default function ConsultationClient() {
               </div>
 
               <h2 style={{ fontSize: "1.65rem", fontWeight: "700", marginBottom: "10px", color: "#FFFFFF" }}>
-                {connectionState === "waiting"
-                  ? `Waiting for ${partnerName} to join...`
-                  : connectionState === "connecting"
-                  ? `Connecting with ${partnerName}...`
-                  : `Consultation Room Active`}
+                {displayStatus}
               </h2>
 
               <p style={{ color: "#9CA3AF", fontSize: "0.95rem", lineHeight: "1.6", marginBottom: "24px" }}>
                 {connectionMessage}
               </p>
+
+              {connectionState === "error" && (
+                <button
+                  onClick={handleRetryConnection}
+                  className="btn btn-primary"
+                  style={{ gap: "8px", margin: "0 auto 20px auto" }}
+                >
+                  <RefreshCw size={16} /> Retry Connection
+                </button>
+              )}
 
               <div
                 style={{
@@ -957,7 +1205,13 @@ export default function ConsultationClient() {
             }}
           >
             <video
-              ref={localVideoRef}
+              ref={(el) => {
+                localVideoRef.current = el;
+                if (el && localStreamRef.current && el.srcObject !== localStreamRef.current) {
+                  el.srcObject = localStreamRef.current;
+                  el.play().catch(() => {});
+                }
+              }}
               autoPlay
               playsInline
               muted
@@ -965,7 +1219,7 @@ export default function ConsultationClient() {
                 width: "100%",
                 height: "100%",
                 objectFit: "cover",
-                transform: isScreenSharing ? "none" : "scaleX(-1)", // Mirror preview only for camera
+                transform: isScreenSharing ? "none" : "scaleX(-1)",
                 display: cameraActive || isScreenSharing ? "block" : "none",
               }}
             />
@@ -1010,6 +1264,93 @@ export default function ConsultationClient() {
               You ({user?.name})
             </div>
           </div>
+
+          {/* Development Diagnostic Panel Overlay */}
+          {showDiagnostics && (
+            <div
+              style={{
+                position: "absolute",
+                top: "20px",
+                left: "20px",
+                backgroundColor: "rgba(11, 21, 18, 0.95)",
+                border: "1px solid rgba(221, 247, 236, 0.25)",
+                borderRadius: "14px",
+                padding: "16px",
+                fontSize: "0.75rem",
+                color: "#D1D5DB",
+                zIndex: 25,
+                width: "320px",
+                boxShadow: "0 10px 25px rgba(0,0,0,0.7)",
+                backdropFilter: "blur(8px)",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "6px" }}>
+                <strong style={{ color: "var(--mint)", display: "flex", alignItems: "center", gap: "6px" }}>
+                  <Terminal size={14} /> WebRTC Live Diagnostics
+                </strong>
+                <button onClick={() => setShowDiagnostics(false)} style={{ background: "none", border: "none", color: "#9CA3AF", cursor: "pointer" }}>
+                  <X size={14} />
+                </button>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
+                <div>Socket/Signaling:</div>
+                <div style={{ color: signalingConnected ? "#10B981" : "#F59E0B", fontWeight: "600" }}>
+                  {signalingConnected ? "Connected" : "Disconnected"}
+                </div>
+
+                <div>Room:</div>
+                <div style={{ color: roomData ? "#10B981" : "#EF4444", fontWeight: "600" }}>
+                  {roomData ? "Joined" : "Not Joined"}
+                </div>
+
+                <div>Local Camera:</div>
+                <div style={{ color: cameraActive && localStream ? "#10B981" : "#EF4444", fontWeight: "600" }}>
+                  {cameraActive && localStream ? "Active (Live)" : "Inactive"}
+                </div>
+
+                <div>Local Microphone:</div>
+                <div style={{ color: micActive && localStream ? "#10B981" : "#EF4444", fontWeight: "600" }}>
+                  {micActive && localStream ? "Active (Live)" : "Inactive"}
+                </div>
+
+                <div>Remote Participant:</div>
+                <div style={{ color: remoteConnected ? "#10B981" : "#F59E0B", fontWeight: "600" }}>
+                  {remoteConnected ? "Present" : "Absent"}
+                </div>
+
+                <div>Peer Connection:</div>
+                <div style={{ color: pcState === "connected" ? "#10B981" : pcState === "failed" ? "#EF4444" : "#F59E0B", fontWeight: "600", textTransform: "capitalize" }}>
+                  {pcState}
+                </div>
+
+                <div>ICE Connection:</div>
+                <div style={{ color: iceState === "connected" || iceState === "completed" ? "#10B981" : iceState === "failed" ? "#EF4444" : "#F59E0B", fontWeight: "600", textTransform: "capitalize" }}>
+                  {iceState}
+                </div>
+
+                <div>ICE Gathering:</div>
+                <div style={{ color: "#9CA3AF", textTransform: "capitalize" }}>
+                  {iceGatheringState}
+                </div>
+
+                <div>Signaling State:</div>
+                <div style={{ color: "#9CA3AF", textTransform: "capitalize" }}>
+                  {signalingState}
+                </div>
+
+                <div>Queued Candidates:</div>
+                <div style={{ color: "#9CA3AF" }}>
+                  {iceCandidateQueueRef.current.length}
+                </div>
+
+                <div>Signals (Sent / Recv):</div>
+                <div style={{ color: "var(--mint)" }}>
+                  {signalStats.sent} / {signalStats.received}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Right Information Side Panel */}
